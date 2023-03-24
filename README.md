@@ -8,7 +8,6 @@ This is a simple script for getting etymology quick from [etymonline.com](https:
 `ety thunder`
 
 ```
-
 thunder (n.)
 
 	mid-13c., from Old English þunor "thunder, thunderclap; the god Thor,"
@@ -28,11 +27,7 @@ thunder (v.)
 	13c., from Old English þunrian, from the source of thunder (n.).
 	Figurative sense of "to speak loudly, threateningly, or bombastically"
 	is recorded from mid-14c. Related: Thundered; thundering. Compare
-	Dutch donderen, German donnern.13c., from Old English  , from the
-	source of   (n.). Figurative sense of "to speak loudly, threateningly,
-	or bombastically" is recorded from mid-14c. Related:  ;  . Compare
-	Dutch  , German  .
-
+	Dutch donderen, German donnern.
 
 ```
 

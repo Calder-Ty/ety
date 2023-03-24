@@ -77,7 +77,6 @@ class ParseTreeNode:
         nodes: typing.List = []
         for child in self:
             # if child.tag == "div" and child.contains_attr("class","word--"):
-            # breakpoint()
             if child.tag == tag and (attr is None or child.contains_attr(attr, value)):
                 nodes.append(child)
         return nodes
@@ -128,7 +127,6 @@ class EtymologyDataParser:
         defs = data.find("div:class:word--")
         for df in defs:
             # Make the section
-            # breakpoint()
             name_nodes = df.find("h1:class:word__name")
             name_nodes.extend(df.find("p:class:word__name"))
             if not name_nodes:
@@ -144,9 +142,8 @@ class EtymologyDataParser:
         iterator = iter(paragraph_node)
         for text in paragraph_node._data:
             buffer.write(text)
-            # breakpoint()
             n = next(iterator)
-            if n is not self:
+            if n is not paragraph_node:
                 buffer.write(" ".join(n._data))
         return buffer.getvalue()
 
