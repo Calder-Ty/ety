@@ -36,7 +36,7 @@ thunder (v.)
 Installation is simple, download the script to your a dirctory in your path:
 
 ```bash
-wget https://raw.githubusercontent.com/Calder-Ty/ety/main/ety -o ~/.local/bin/ety
+curl https://raw.githubusercontent.com/Calder-Ty/ety/main/ety > ~/.local/bin/ety
 chmod +x ~/.local/bin/ety
 ```
 
