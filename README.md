@@ -1,0 +1,2 @@
+# ety
+CLI etymology tool
