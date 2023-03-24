@@ -1,0 +1,178 @@
+#!/usr/bin/env python3
+"""A Script for getting the etymology of a work from etymonline"""
+import argparse
+import sys
+import io
+import textwrap
+import typing
+import urllib.request
+from html.parser import HTMLParser
+
+
+class EtymologySection(typing.NamedTuple):
+    name: str
+    definition: str
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("word", help="The word to search for etymology")
+    args = parser.parse_args()
+    html = make_request(args.word)
+    data = parse_data(html)
+    write_results(data)
+
+
+def make_request(word) -> bytes:
+    try:
+        with urllib.request.urlopen(f"https://www.etymonline.com/word/{word}") as page:
+            return page.read()
+    except urllib.error.HTTPError as err:
+        if err.code == 404:
+            sys.stderr.write(
+                f"Unabe to locate {word} in dictionary, perhaps try stem or variation?\n"
+            )
+            sys.exit(1)
+        else:
+            raise err
+
+
+def parse_data(data: bytes):
+    parser = EtymologyHTMLParser()
+    parser.feed(data.decode())
+    data_parser = EtymologyDataParser()
+    data_parser.parse(parser._root)
+    return data_parser.sections
+
+
+def write_results(data: typing.List[EtymologySection]):
+    for section in data:
+        print(bold(section.name), "\n")
+        for line in textwrap.wrap(section.definition):
+            print("\t" + line)
+        print("\n")
+
+def bold(text:str):
+    return "\033[1m" + text + "\033[0m"
+
+
+class ParseTreeNode:
+    def __init__(self, tag, attrs, parent):
+        self.tag = tag
+        self.attrs = attrs
+        self._parent = parent
+        self._children = []
+        self._data = []
+
+    def __iter__(self):
+        if self._children:
+            for child in self._children:
+                yield from child
+        yield self
+
+    def find(self, path: str):
+        # path = "tag[:[attr[:[value]]]]"
+        tag, attr, value = self.split_path(path)
+
+        nodes: typing.List = []
+        for child in self:
+            # if child.tag == "div" and child.contains_attr("class","word--"):
+            # breakpoint()
+            if child.tag == tag and (attr is None or child.contains_attr(attr, value)):
+                nodes.append(child)
+        return nodes
+
+    def split_path(self, path: str):
+        tokens = path.split(":")
+        tag = tokens.pop(0)
+
+        # [], ["attr"], ["attr", "val"]
+        if not tokens:
+            attr = None
+            value = None
+        elif len(tokens) == 1:
+            attr = tokens[0]
+            value = None
+        else:
+            attr = tokens.pop(0)
+            value = tokens.pop(0)
+        return tag, attr, value
+
+    def contains_attr(self, attr, value):
+        valid_attrs = [a for a in self.attrs if a[0] == attr]
+        if (value is None) and valid_attrs:
+            return True
+        return any((v[1].startswith(value) for v in valid_attrs))
+
+    def add_child(self, tag, attrs):
+        child = ParseTreeNode(tag, attrs, self)
+        self._children.append(child)
+        return child
+
+    def close_branch(self):
+        """Closes Self from adding more children"""
+        return self._parent
+
+    def __repr__(self):
+        return f"({self.tag}, {self.attrs}): {len(self._children)}, data= {self._data}"
+
+    def append_data(self, data):
+        self._data.append(data)
+
+
+class EtymologyDataParser:
+    def __init__(self):
+        self.sections: typing.List[EtymologySection] = []
+
+    def parse(self, data: ParseTreeNode):
+        defs = data.find("div:class:word--")
+        for df in defs:
+            # Make the section
+            # breakpoint()
+            name_nodes = df.find("h1:class:word__name")
+            name_nodes.extend(df.find("p:class:word__name"))
+            if not name_nodes:
+                continue
+            name = "".join(name_nodes[0]._data)
+            def_node = df.find("section:class:word__defination")[0].find("p")
+            definition = self._pragraph_to_string(def_node[0])
+            self.sections.append(EtymologySection(name, definition))
+
+    def _pragraph_to_string(self, paragraph_node: ParseTreeNode) -> str:
+        """Strips The paragraph sub tags"""
+        buffer = io.StringIO(newline=None)
+        iterator = iter(paragraph_node)
+        for text in paragraph_node._data:
+            buffer.write(text)
+            # breakpoint()
+            n = next(iterator)
+            if n is not self:
+                buffer.write(" ".join(n._data))
+        return buffer.getvalue()
+
+
+class EtymologyHTMLParser(HTMLParser):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._root = ParseTreeNode("", "", None)
+        self._current_node = self._root
+
+    def handle_starttag(
+        self, tag: str, attrs: typing.List[typing.Tuple[str, typing.Optional[str]]]
+    ):
+        # I wish I had pattern matching
+        node = self._current_node.add_child(tag, attrs)
+        self._current_node = node
+
+    def handle_endtag(self, tag):
+        self._current_node = self._current_node.close_branch()
+
+    def handle_startendtag(self, tag, attrs):
+        self._current_node.add_child(tag, attrs)
+
+    def handle_data(self, data):
+        self._current_node.append_data(data)
+
+
+if __name__ == "__main__":
+    main()
