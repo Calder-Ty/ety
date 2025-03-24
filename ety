@@ -25,7 +25,14 @@ def main():
 
 def make_request(word) -> bytes:
     try:
-        with urllib.request.urlopen(f"https://www.etymonline.com/word/{word}") as page:
+        req = urllib.request.Request(
+            f"https://www.etymonline.com/word/{word}",
+            data=None,
+            headers={
+                'User-Agent': 'ety/1.1'
+            }
+        )
+        with urllib.request.urlopen(req) as page:
             return page.read()
     except urllib.error.HTTPError as err:
         if err.code == 404:
